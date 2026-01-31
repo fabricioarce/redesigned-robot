@@ -38,8 +38,21 @@ def run():
         context = browser.new_context()
         page = context.new_page()
 
-        print("Navegando a Moodle login...")
-        page.goto("https://moodle.ccsancarlos.com/login/index.php")
+        # Retry logic for login page
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                print(f"Navegando a Moodle login (Intento {attempt + 1}/{max_retries})...")
+                # Increased timeout to 60 seconds
+                page.goto("https://moodle.ccsancarlos.com/login/index.php", timeout=60000)
+                break
+            except Exception as e:
+                print(f"Error cargando login: {e}")
+                if attempt == max_retries - 1:
+                    print("Se agotaron los intentos de conexión.")
+                    browser.close()
+                    sys.exit(1)
+                time.sleep(5)
 
         print("Ingresando credenciales...")
         page.fill("input#username", USERNAME)
@@ -49,66 +62,83 @@ def run():
         page.click("button#loginbtn")
 
         try:
-            page.wait_for_url("https://moodle.ccsancarlos.com/my/", timeout=15000)
+            page.wait_for_url("https://moodle.ccsancarlos.com/my/", timeout=30000)
             print("Sesión iniciada con éxito!")
         except Exception as e:
             print(f"Fallo al iniciar sesión: {e}")
             browser.close()
             sys.exit(1)
 
-        # UNA SOLA PASADA (sin while True para GH Actions)
-        print("\nIniciando ciclo de navegación única...")
-        close_popups(page)
+        # CICLO DE 20 REPETICIONES
+        cycles = 20
+        print(f"\nIniciando ciclo de {cycles} repeticiones para mantener actividad...")
         
-        try:
-            # Navegar a "Mis cursos" para asegurar visibilidad
-            print("Accediendo a la lista de cursos...")
-            page.goto("https://moodle.ccsancarlos.com/my/courses.php", timeout=60000)
-            page.wait_for_load_state("networkidle")
-
-            if page.is_visible('div[data-course-id="77"] a'):
-                print("Entrando al curso ID 77...")
-                page.click('div[data-course-id="77"] a', timeout=10000)
-                page.wait_for_load_state("networkidle")
-            else:
-                print("No se encontró el curso ID 77 en la página principal.")
-                
+        for cycle in range(cycles):
+            print(f"\n--- CICLO {cycle + 1}/{cycles} ---")
             close_popups(page)
-
-            # Asegurar que el sidebar esté abierto
-            if not page.is_visible('#course-index'):
-                print("Abriendo barra lateral...")
-                page.click('button[data-target="theme_boost-drawers-courseindex"]', timeout=5000)
-                page.wait_for_timeout(1000)
-
-            # Iterar por las secciones una vez
-            print("Iterando por las secciones del sidebar...")
-            links = page.query_selector_all('#course-index .courseindex-link')
             
-            for i in range(len(links)):
-                try:
-                    close_popups(page)
-                    current_links = page.query_selector_all('#course-index .courseindex-link')
-                    if i >= len(current_links): break
-                        
-                    section = current_links[i]
-                    section_text = section.inner_text().strip()
-                    if not section_text or "General" in section_text: continue
-                        
-                    print(f"  - Click en sección {i+1}: {section_text}")
-                    section.scroll_into_view_if_needed()
-                    section.click()
-                    page.wait_for_timeout(2000) 
-                except Exception as e:
-                    print(f"  - Error en sección {i+1}: {e}")
+            try:
+                # Navegar a "Mis cursos" para asegurar visibilidad y refrescar sesión
+                print("Accediendo a la lista de cursos...")
+                page.goto("https://moodle.ccsancarlos.com/my/courses.php", timeout=60000)
+                page.wait_for_load_state("networkidle")
 
-            print("Ciclo completado con éxito.")
-            
-        except Exception as e:
-            print(f"Error durante el ciclo: {e}")
-            browser.close()
-            sys.exit(1)
+                # Intentar entrar al curso específico
+                if page.is_visible('div[data-course-id="77"] a'):
+                    print("Entrando al curso ID 77...")
+                    page.click('div[data-course-id="77"] a', timeout=10000)
+                    page.wait_for_load_state("networkidle")
+                else:
+                    print("No se encontró el curso ID 77 en la página principal.")
+                    
+                close_popups(page)
 
+                # Asegurar que el sidebar esté abierto
+                if not page.is_visible('#course-index'):
+                    print("Abriendo barra lateral...")
+                    try:
+                        page.click('button[data-target="theme_boost-drawers-courseindex"]', timeout=5000)
+                        page.wait_for_timeout(1000)
+                    except:
+                        print("No se pudo abrir sidebar (o ya estaba abierto).")
+
+                # Iterar por las secciones
+                print("Iterando por las secciones del sidebar...")
+                links = page.query_selector_all('#course-index .courseindex-link')
+                
+                # Limitamos a visitar algunas secciones para no tardar demasiado por ciclo si hay muchas
+                for i in range(len(links)):
+                    try:
+                        close_popups(page)
+                        # Re-query elements to avoid stale handles
+                        current_links = page.query_selector_all('#course-index .courseindex-link')
+                        if i >= len(current_links): break
+                            
+                        section = current_links[i]
+                        section_text = section.inner_text().strip()
+                        if not section_text or "General" in section_text: continue
+                            
+                        # print(f"  - Click en sección {i+1}: {section_text}")
+                        section.scroll_into_view_if_needed()
+                        section.click()
+                        # Breve espera entre clicks
+                        page.wait_for_timeout(1000) 
+                    except Exception as e:
+                        pass # Ignorar errores en clicks individuales para no detener el ciclo
+
+                print(f"Ciclo {cycle + 1} completado.")
+                
+                if cycle < cycles - 1:
+                    wait_minutes = 3
+                    print(f"Esperando {wait_minutes} minutos para el siguiente ciclo...")
+                    time.sleep(wait_minutes * 60)
+                
+            except Exception as e:
+                print(f"Error durante el ciclo {cycle + 1}: {e}")
+                # No salimos, intentamos el siguiente ciclo tras una espera
+                time.sleep(60)
+
+        print("\nTodos los ciclos completados.")
         browser.close()
 
 if __name__ == "__main__":
