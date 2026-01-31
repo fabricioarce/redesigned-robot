@@ -3,7 +3,7 @@ name: Run Moodle Script
 on:
   schedule:
     # Corre cada 20 minutos (puedes ajustarlo)
-    - cron: '*/5 * * * *'
+    - cron: '*/20 * * * *'
   workflow_dispatch: # Permite correrlo manualmente desde el botón "Run workflow"
 
 jobs:
