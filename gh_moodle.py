@@ -123,7 +123,7 @@ def run():
                         section.scroll_into_view_if_needed()
                         section.click()
                         # Breve espera entre clicks
-                        page.wait_for_timeout(1000) 
+                        page.wait_for_timeout(10000) 
                     except Exception as e:
                         pass # Ignorar errores en clicks individuales para no detener el ciclo
 
