@@ -119,7 +119,7 @@ def run():
                         section_text = section.inner_text().strip()
                         if not section_text or "General" in section_text: continue
                             
-                        # print(f"  - Click en sección {i+1}: {section_text}")
+                        print(f"  - Click en sección {i+1}: {section_text}")
                         section.scroll_into_view_if_needed()
                         section.click()
                         # Breve espera entre clicks
