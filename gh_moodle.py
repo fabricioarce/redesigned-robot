@@ -129,7 +129,7 @@ def run():
                 print(f"Ciclo {cycle + 1} completado.")
                 
                 if cycle < cycles - 1:
-                    wait_minutes = 3
+                    wait_minutes = 1
                     print(f"Esperando {wait_minutes} minutos para el siguiente ciclo...")
                     time.sleep(wait_minutes * 60)
                 
