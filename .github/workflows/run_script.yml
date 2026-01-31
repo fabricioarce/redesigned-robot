@@ -31,4 +31,5 @@ jobs:
       env:
         MOODLE_USER: ${{ secrets.MOODLE_USER }}
         MOODLE_PASSWORD: ${{ secrets.MOODLE_PASSWORD }}
+        PYTHONUNBUFFERED: "1"
       run: python gh_moodle.py

@@ -4,6 +4,7 @@ import time
 import sys
 
 # Credenciales desde variables de entorno para seguridad en GH Actions
+sys.stdout.reconfigure(line_buffering=True)
 USERNAME = os.getenv("MOODLE_USER")
 PASSWORD = os.getenv("MOODLE_PASSWORD")
 # USERNAME = "fabricioarce"
